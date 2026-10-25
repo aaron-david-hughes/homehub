@@ -1,20 +1,44 @@
 name: cd
 
-# Pushes to main: vet, test, then build and publish the services that changed
-# to ghcr.io/<owner>/homehub/<service>. "Run workflow" rebuilds every service.
+# Pushes to main:
+#   - release-please keeps a "release PR" open (version bump + changelog). Merging that
+#     PR tags vX.Y.Z and creates the GitHub Release with notes grouped by commit type.
+#   - Normal merge        -> publish :main for the services that changed.
+#   - Release PR merged   -> publish :X.Y.Z, :X.Y, :X and :latest for EVERY service
+#                            (one version for all of HomeHub, so a version always
+#                            refers to a complete, consistent set of images).
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: cd-${{ github.ref }}
-  cancel-in-progress: false
+  group: cd-main
+  cancel-in-progress: false # never cancel a release half-way
 
 jobs:
+  release-please:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+      version: ${{ steps.rp.outputs.version }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v5
+        with:
+          # A personal access token, not GITHUB_TOKEN: pull requests and tags created
+          # with GITHUB_TOKEN do not trigger workflows, so the release PR would never
+          # get its required checks. See docs/RELEASING.md.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
   test:
     runs-on: ubuntu-24.04
     steps:
@@ -29,19 +53,21 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       services: ${{ steps.detect.outputs.services }}
+      all: ${{ steps.detect.outputs.all }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - id: detect
         run: |
-          base=""
-          [ "${{ github.event_name }}" = "push" ] && base="${{ github.event.before }}"
-          echo "services=$(.github/scripts/changed-services.sh "$base")" >> "$GITHUB_OUTPUT"
+          echo "services=$(.github/scripts/changed-services.sh '${{ github.event.before }}')" >> "$GITHUB_OUTPUT"
+          echo "all=$(.github/scripts/changed-services.sh)" >> "$GITHUB_OUTPUT"
 
-  image:
-    needs: [test, changes]
-    if: needs.changes.outputs.services != '[]'
+  # Unreleased builds of main. One moving tag per service (:main), nothing else, so the
+  # registry does not fill up with per-commit tags.
+  main-image:
+    needs: [release-please, test, changes]
+    if: needs.release-please.outputs.release_created != 'true' && needs.changes.outputs.services != '[]'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -58,14 +84,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - id: short
+        run: echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - id: meta
         uses: docker/metadata-action@v6
         with:
           # ghcr.io/<owner>/homehub/<service>, lowercased automatically
           images: ghcr.io/${{ github.repository }}/${{ matrix.service }}
-          tags: |
-            type=raw,value=latest
-            type=sha,format=short,prefix=
+          tags: type=raw,value=main
       - uses: docker/build-push-action@v7
         with:
           context: .
@@ -73,7 +99,51 @@ jobs:
           platforms: linux/arm64,linux/amd64
           build-args: |
             SERVICE=${{ matrix.service }}
-            VERSION=${{ github.sha }}
+            VERSION=main-${{ steps.short.outputs.sha }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  # Runs only when the release PR was just merged. Publishes every service.
+  release-images:
+    needs: [release-please, test, changes]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.all) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.service }}
+          # v1.2.0 -> 1.2.0, 1.2, 1 and latest. (Image tags have no "v"; the git tag does.)
+          tags: |
+            type=semver,pattern={{version}},value=${{ needs.release-please.outputs.tag_name }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.release-please.outputs.tag_name }}
+            type=semver,pattern={{major}},value=${{ needs.release-please.outputs.tag_name }}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          platforms: linux/arm64,linux/amd64
+          build-args: |
+            SERVICE=${{ matrix.service }}
+            VERSION=${{ needs.release-please.outputs.version }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

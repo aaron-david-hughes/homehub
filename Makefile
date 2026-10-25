@@ -4,6 +4,7 @@
 SERVICE ?= portal
 HTMX_VERSION ?= 2.0.4
 # Every module listed in go.work, as package patterns (new services are picked up automatically).
+HELM_ARGS ?=
 MODS = $(shell awk '/^\t\.\//{print $$1"/..."}' go.work)
 
 .PHONY: help build run test vet fmt vendor image lint-chart deploy
@@ -48,6 +49,7 @@ image:
 lint-chart:
 	helm lint services/$(SERVICE)/charts/$(SERVICE)
 
-# Installs or upgrades the release using the image published to GHCR.
+# Installs or upgrades the release. By default the chart deploys the version it shipped with.
+# Unreleased build:  make deploy HELM_ARGS="--set image.tag=main --set image.pullPolicy=Always"
 deploy:
-	helm upgrade --install $(SERVICE) services/$(SERVICE)/charts/$(SERVICE) --wait --timeout 3m
+	helm upgrade --install $(SERVICE) services/$(SERVICE)/charts/$(SERVICE) --wait --timeout 3m $(HELM_ARGS)

@@ -1,0 +1,52 @@
+name: pr-title
+
+# Squash merges use the PR title as the commit message, and release-please reads
+# those commits to pick the next version and write the changelog. So the title
+# must be a valid conventional commit:  type(scope): description
+#
+#   feat(portal): show service versions on the dashboard
+#   fix(shared): retry registration with backoff
+#   feat(portal)!: rename the registration endpoint     <- "!" marks a breaking change
+#
+# Mark this check as required in the branch ruleset (check name: "Validate PR title").
+# "edited" matters: fixing the title re-runs the check.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  title:
+    name: Validate PR title
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            test
+            build
+            ci
+            chore
+            revert
+          # Scope is optional. When given it must be one of these, so typos fail.
+          scopes: |
+            portal
+            shared
+            charts
+            infra
+            ci
+            deps
+            docs
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The subject "{subject}" in the PR title "{title}" must not start with an
+            uppercase letter. Example: "feat(portal): add service cards".
