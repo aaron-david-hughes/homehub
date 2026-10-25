@@ -1,0 +1,10 @@
+.git
+.github
+bin
+docs
+infra
+**/charts
+**/*_test.go
+*.md
+Makefile
+.DS_Store

@@ -1,0 +1,34 @@
+# The portal keeps its registry in memory, so run exactly one replica.
+# Services re-register every minute, so a restart heals itself.
+replicaCount: 1
+
+image:
+  repository: ghcr.io/aaron-david-hughes/homehub/portal
+  # "latest" is rebuilt on every push to main; pin a short commit SHA for repeatable deploys.
+  tag: latest
+  pullPolicy: Always
+
+service:
+  port: 80 # other services register at http://portal:80 (same namespace)
+
+ingress:
+  enabled: true
+  className: traefik
+  # Empty host matches any hostname, so http://<pi-ip>/ works with no DNS.
+  # Later: set to e.g. homehub.home.arpa
+  host: ""
+  path: /
+
+config:
+  timezone: Europe/London
+  pollInterval: 30s
+  # Show "coming soon" cards for planned services. Turn off once they exist.
+  seedDemo: true
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 16Mi
+  limits:
+    cpu: 200m
+    memory: 64Mi

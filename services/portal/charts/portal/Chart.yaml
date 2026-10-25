@@ -1,0 +1,6 @@
+apiVersion: v2
+name: portal
+description: HomeHub portal - the dashboard that discovers services as they register
+type: application
+version: 0.1.0
+appVersion: "latest"

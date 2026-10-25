@@ -66,6 +66,28 @@ POST /api/services/register
 3. Use `shared/health` for `/health` and `shared/registry` to register.
 4. `make run SERVICE=<name>`.
 
+## Build and deploy
+
+Images are built by GitHub Actions (`.github/workflows/ci.yaml`): on every pull request
+it vets, tests and builds the services that changed; on pushes to `main` it also
+publishes `linux/arm64` and `linux/amd64` images to
+`ghcr.io/aaron-david-hughes/homehub/<service>` tagged `latest` and the short commit SHA.
+Changes under `shared/`, the `Dockerfile`, `go.work` or the workflow rebuild every service.
+
+One-off setup after the first image is published: on GitHub open your profile's
+Packages, select the `homehub/portal` package, then Package settings and set visibility
+to Public, so the cluster can pull it without credentials.
+
+On the Pi (with this repo cloned and `KUBECONFIG` set):
+
+```bash
+make deploy SERVICE=portal
+kubectl get pods
+```
+
+The portal is then served at `http://<pi-ip>/`. To roll out a new `latest` image:
+`kubectl rollout restart deployment/portal`.
+
 ## Portal configuration
 
 | Variable        | Default | Purpose                                         |
