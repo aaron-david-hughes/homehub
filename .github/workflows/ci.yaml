@@ -1,0 +1,73 @@
+name: ci
+
+# Pull requests: vet, test, and build (but do not publish) the services that changed.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.24"
+          cache: false # no third-party deps, so there is no go.sum to key a cache on
+      - run: make vet test
+
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      services: ${{ steps.detect.outputs.services }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: detect
+        run: echo "services=$(.github/scripts/changed-services.sh '${{ github.event.pull_request.base.sha }}')" >> "$GITHUB_OUTPUT"
+
+  image:
+    needs: [test, changes]
+    if: needs.changes.outputs.services != '[]'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          platforms: linux/arm64,linux/amd64
+          build-args: |
+            SERVICE=${{ matrix.service }}
+            VERSION=${{ github.sha }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.service }}
+
+  # One stable check for the branch ruleset. The "image (portal)" matrix jobs only
+  # exist when that service changed, so they cannot be required individually; this
+  # job passes when tests passed and every image job that ran succeeded or was skipped.
+  ci-ok:
+    if: always()
+    needs: [test, changes, image]
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          TEST: ${{ needs.test.result }}
+          CHANGES: ${{ needs.changes.result }}
+          IMAGE: ${{ needs.image.result }}
+        run: |
+          echo "test=$TEST changes=$CHANGES image=$IMAGE"
+          [ "$TEST" = success ] && [ "$CHANGES" = success ] \
+            && { [ "$IMAGE" = success ] || [ "$IMAGE" = skipped ]; }

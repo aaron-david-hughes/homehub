@@ -1,0 +1,39 @@
+{{define "services"}}<section id="services" class="services" hx-get="/ui/services" hx-trigger="every 5s" hx-swap="outerHTML" aria-live="polite">
+  <div class="summary">
+    {{if .Live}}
+      <span class="pill {{if eq .Healthy .Live}}ok{{else}}warn{{end}}">
+        <span class="pip"></span>{{.Healthy}} of {{.Live}} service{{if ne .Live 1}}s{{end}} healthy
+      </span>
+    {{else}}
+      <span class="pill idle"><span class="pip"></span>No live services yet</span>
+    {{end}}
+  </div>
+
+  {{if .Cards}}
+  <ul class="grid">
+    {{range .Cards}}
+    <li>
+      {{if .Clickable}}<a class="card {{.Status}}" href="{{.Href}}">{{else}}<div class="card {{.Status}}" {{if .Soon}}aria-disabled="true"{{end}}>{{end}}
+        <div class="card-top">
+          <span class="icon">{{icon .Icon}}</span>
+          <span class="badge {{.Status}}"><span class="pip"></span>{{.StatusLabel}}</span>
+        </div>
+        <h2>{{.DisplayName}}</h2>
+        {{if .Description}}<p class="desc">{{.Description}}</p>{{end}}
+        <div class="meta">
+          {{if .Version}}<span>v{{.Version}}</span>{{end}}
+          {{if .Checked}}<span>checked {{.Checked}}</span>{{end}}
+        </div>
+      {{if .Clickable}}</a>{{else}}</div>{{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <div class="empty">
+    <div class="empty-icon">{{icon "grid"}}</div>
+    <h2>Nothing registered yet</h2>
+    <p>Start a service with a portal URL and it will appear here on its own.</p>
+    <pre>POST /api/services/register</pre>
+  </div>
+  {{end}}
+</section>{{end}}
