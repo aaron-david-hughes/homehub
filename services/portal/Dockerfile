@@ -1,7 +1,10 @@
-# One Dockerfile for every Go service in the monorepo.
-# Build from the repo root so services can use shared/:
+# Portal image. Every service has its own Dockerfile like this one; to add a
+# service, copy it and change the SERVICE default.
 #
-#   docker build --build-arg SERVICE=portal -t homehub/portal:dev .
+# The build CONTEXT must be the repo root (so the build can see shared/ and
+# go.work), while the Dockerfile lives with the service:
+#
+#   docker build -f services/portal/Dockerfile -t homehub/portal:dev .
 #
 # The Go toolchain always runs on the build machine and cross-compiles for the
 # target platform, so building linux/arm64 images on an amd64 CI runner (or an
@@ -10,7 +13,7 @@
 FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS build
 ARG TARGETOS
 ARG TARGETARCH
-ARG SERVICE
+ARG SERVICE=portal
 ARG VERSION=dev
 
 WORKDIR /src

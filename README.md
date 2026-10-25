@@ -12,9 +12,12 @@ services/<name>/   one folder per service (Go + HTMX)
   cmd/<name>/        main package
   internal/          service code
   web/               embedded static assets
+  Dockerfile         image build (context is the repo root, see the file's header)
+  charts/<name>/     Helm chart
 shared/            Go module shared by every service (registration contract, health handler)
 infra/             cluster bootstrap and GitOps manifests (later)
 docs/              hardware notes, architecture
+.github/           ci.yaml (pull requests), cd.yaml (main -> GHCR), scripts/
 go.work            ties shared/ and every service into one workspace
 ```
 
@@ -64,15 +67,17 @@ POST /api/services/register
 1. Create `services/<name>/` with its own `go.mod` (module `github.com/aaron-david-hughes/homehub/services/<name>`).
 2. Add `./services/<name>` to `go.work`.
 3. Use `shared/health` for `/health` and `shared/registry` to register.
-4. `make run SERVICE=<name>`.
+4. Copy `services/portal/Dockerfile` and change the `SERVICE` default; copy `charts/portal` as a starting chart.
+5. `make run SERVICE=<name>`. CI and `make image/deploy` pick the new service up automatically.
 
 ## Build and deploy
 
-Images are built by GitHub Actions (`.github/workflows/ci.yaml`): on every pull request
-it vets, tests and builds the services that changed; on pushes to `main` it also
-publishes `linux/arm64` and `linux/amd64` images to
+Images are built by GitHub Actions. `.github/workflows/ci.yaml` runs on every pull request:
+it vets, tests and builds (without publishing) the services that changed. `cd.yaml` runs on
+pushes to `main` and publishes `linux/arm64` and `linux/amd64` images to
 `ghcr.io/aaron-david-hughes/homehub/<service>` tagged `latest` and the short commit SHA.
-Changes under `shared/`, the `Dockerfile`, `go.work` or the workflow rebuild every service.
+A service is any `services/<name>/` containing a `Dockerfile`. Changes under `shared/`,
+`go.work` or `.github/` rebuild every service; otherwise only the changed service is built.
 
 One-off setup after the first image is published: on GitHub open your profile's
 Packages, select the `homehub/portal` package, then Package settings and set visibility
