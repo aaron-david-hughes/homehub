@@ -4,9 +4,12 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/aaron-david-hughes/homehub/portal
-  # "latest" is rebuilt on every push to main; pin a short commit SHA for repeatable deploys.
-  tag: latest
-  pullPolicy: Always
+  # Empty means the chart's appVersion, i.e. the release this chart shipped with (e.g. 1.2.0).
+  # Other useful values:
+  #   edge   latest unreleased build of main (use with pullPolicy: Always)
+  #   1.2    newest 1.2.x release (picks up fixes on its own)
+  tag: ""
+  pullPolicy: IfNotPresent
 
 service:
   port: 80 # other services register at http://portal:80 (same namespace)

@@ -72,16 +72,17 @@ POST /api/services/register
 
 ## Build and deploy
 
-Images are built by GitHub Actions. `.github/workflows/ci.yaml` runs on every pull request:
-it vets, tests and builds (without publishing) the services that changed. `cd.yaml` runs on
-pushes to `main` and publishes `linux/arm64` and `linux/amd64` images to
-`ghcr.io/aaron-david-hughes/homehub/<service>` tagged `latest` and the short commit SHA.
-A service is any `services/<name>/` containing a `Dockerfile`. Changes under `shared/`,
-`go.work` or `.github/` rebuild every service; otherwise only the changed service is built.
+Images are built by GitHub Actions and published to `ghcr.io/aaron-david-hughes/homehub/<service>`
+(`linux/arm64` and `linux/amd64`).
 
-One-off setup after the first image is published: on GitHub open your profile's
-Packages, select the `homehub/portal` package, then Package settings and set visibility
-to Public, so the cluster can pull it without credentials.
+- `ci.yaml` runs on every pull request: vet, test, and build (without publishing) the services that changed.
+- `pr-title.yaml` requires the PR title to be a conventional commit (see `CONTRIBUTING.md`).
+- `cd.yaml` runs on pushes to `main`. Normal merges publish `:edge`; merging the release PR publishes
+  `:X.Y.Z`, `:X.Y`, `:X` and `:latest` for every service, plus a GitHub Release with grouped notes.
+
+A service is any `services/<name>/` containing a `Dockerfile`. Changes under `shared/`, `go.work` or
+`.github/` rebuild every service; otherwise only the changed service is built. One-time repository setup
+(token, branch ruleset, package visibility) and the tag scheme are in [docs/RELEASING.md](docs/RELEASING.md).
 
 On the Pi (with this repo cloned and `KUBECONFIG` set):
 
@@ -90,8 +91,11 @@ make deploy SERVICE=portal
 kubectl get pods
 ```
 
-The portal is then served at `http://<pi-ip>/`. To roll out a new `latest` image:
-`kubectl rollout restart deployment/portal`.
+The chart deploys the release it shipped with. Before the first release there is no versioned
+image, so use the unreleased build:
+`make deploy SERVICE=portal HELM_ARGS="--set image.tag=edge --set image.pullPolicy=Always"`
+(see `docs/RELEASING.md`).
+The portal is then served at `http://<pi-ip>/`.
 
 ## Portal configuration
 
