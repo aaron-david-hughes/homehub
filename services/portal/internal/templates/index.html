@@ -1,0 +1,39 @@
+{{define "index"}}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>HomeHub</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">{{icon "home"}}</span>
+        <span class="brand-name">HomeHub</span>
+      </a>
+      <span class="clock" id="clock" aria-label="Local time"></span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>{{greeting}}</h1>
+      <p class="sub">Everything running in your home, in one place.</p>
+    </section>
+
+    {{template "services" .}}
+  </main>
+
+  <footer class="wrap foot">
+    <span>HomeHub portal</span>
+    <span class="dot" aria-hidden="true">&middot;</span>
+    <span>Services register themselves automatically</span>
+  </footer>
+</body>
+</html>{{end}}
