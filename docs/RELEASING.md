@@ -6,7 +6,7 @@ conventional-commit PR titles that were squash-merged, using
 
 ## How a release happens
 
-1. PRs merge to `main`. For each one, images of the services that changed are published as **`:edge`**
+1. PRs merge to `main`. For each one, images of the services that changed are published as **`:main`**
    (a single moving tag per service: the newest unreleased build of `main`).
 2. release-please keeps one standing pull request open, titled `chore: release X.Y.Z`. It contains
    the next version, the `CHANGELOG.md` entry, `version.txt`, and the Helm chart versions.
@@ -28,11 +28,11 @@ breaking change (`!` or a `BREAKING CHANGE:` line) the major. If nothing releasa
 | `1.2` | on each 1.2.x release | follow fixes within a minor version |
 | `1` | on each 1.x release | follow all non-breaking updates |
 | `latest` | on each release | newest release |
-| `edge` | on each merge to main | testing unreleased changes |
+| `main` | on each merge to main | testing unreleased changes |
 
 The Helm chart pins the version it shipped with (`appVersion`), so `make deploy` gives a repeatable
-deploy. To test unreleased code: `make deploy SERVICE=portal HELM_ARGS="--set image.tag=edge --set image.pullPolicy=Always"`.
-Before the first release there is no versioned image yet, so use `edge`.
+deploy. To test unreleased code: `make deploy SERVICE=portal HELM_ARGS="--set image.tag=main --set image.pullPolicy=Always"`.
+Before the first release there is no versioned image yet, so use `main`.
 
 The first release is `1.0.0` (set by `initial-version` in `release-please-config.json`). Check the
 version shown in the first release PR before merging it. If it is wrong, put a `Release-As: 1.0.0`

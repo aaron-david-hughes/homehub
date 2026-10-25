@@ -6,7 +6,7 @@ image:
   repository: ghcr.io/aaron-david-hughes/homehub/portal
   # Empty means the chart's appVersion, i.e. the release this chart shipped with (e.g. 1.2.0).
   # Other useful values:
-  #   edge   latest unreleased build of main (use with pullPolicy: Always)
+  #   main   latest unreleased build of the main branch (use with pullPolicy: Always)
   #   1.2    newest 1.2.x release (picks up fixes on its own)
   tag: ""
   pullPolicy: IfNotPresent

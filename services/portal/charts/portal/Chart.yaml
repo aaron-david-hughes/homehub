@@ -3,6 +3,6 @@ name: portal
 description: HomeHub portal - the dashboard that discovers services as they register
 type: application
 # Both versions are rewritten by release-please on each release (see docs/RELEASING.md).
-# Until the first release they are 0.0.0, so deploy with --set image.tag=edge.
+# Until the first release they are 0.0.0, so deploy with --set image.tag=main.
 version: 0.0.0 # x-release-please-version
 appVersion: "0.0.0" # x-release-please-version

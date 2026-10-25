@@ -77,7 +77,7 @@ Images are built by GitHub Actions and published to `ghcr.io/aaron-david-hughes/
 
 - `ci.yaml` runs on every pull request: vet, test, and build (without publishing) the services that changed.
 - `pr-title.yaml` requires the PR title to be a conventional commit (see `CONTRIBUTING.md`).
-- `cd.yaml` runs on pushes to `main`. Normal merges publish `:edge`; merging the release PR publishes
+- `cd.yaml` runs on pushes to `main`. Normal merges publish `:main`; merging the release PR publishes
   `:X.Y.Z`, `:X.Y`, `:X` and `:latest` for every service, plus a GitHub Release with grouped notes.
 
 A service is any `services/<name>/` containing a `Dockerfile`. Changes under `shared/`, `go.work` or
@@ -93,7 +93,7 @@ kubectl get pods
 
 The chart deploys the release it shipped with. Before the first release there is no versioned
 image, so use the unreleased build:
-`make deploy SERVICE=portal HELM_ARGS="--set image.tag=edge --set image.pullPolicy=Always"`
+`make deploy SERVICE=portal HELM_ARGS="--set image.tag=main --set image.pullPolicy=Always"`
 (see `docs/RELEASING.md`).
 The portal is then served at `http://<pi-ip>/`.
 
